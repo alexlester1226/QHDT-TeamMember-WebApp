@@ -1,0 +1,27 @@
+POST http://127.0.0.1:8000/api/create_team/
+Content-Type: application/json
+
+{
+  "name": "Stand Design Sub Team",
+  "title": "The Stand Design Sub Team of the Queens HyperLoop Design Team builds, designs and models the stand for which the pod rest upon",
+  "bio": "Stand"
+}
+
+###
+
+POST http://127.0.0.1:8000/api/search_team/
+Content-Type: application/json
+
+{
+  "team": "Pod"
+}
+
+
+### 
+
+POST http://127.0.0.1:8000/api/get_user/
+Content-Type: application/json
+
+{
+  "id": "24"
+}

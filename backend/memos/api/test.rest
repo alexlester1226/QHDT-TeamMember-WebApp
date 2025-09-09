@@ -1,0 +1,19 @@
+POST http://127.0.0.1:8000/api//memos/create_memo/
+Content-Type: application/json
+
+{
+  "title": "Test",
+  "body": "Test Post",
+  "team": "Pod"
+}
+
+###
+
+POST http://127.0.0.1:8000/api//memos/delete_memo/
+Content-Type: application/json
+
+{
+  "title": "Test",
+  "body": "Test Post",
+  "team": "Pod"
+}
