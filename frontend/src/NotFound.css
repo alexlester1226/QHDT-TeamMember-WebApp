@@ -1,0 +1,59 @@
+#notfound {
+    position: relative;
+    height: 100vh;
+  }
+  
+  .notfound {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+  }
+  
+  .notfound .notfound-404 {
+    position: relative;
+    height: 180px;
+    margin-bottom: 20px;
+  }
+  
+  .notfound .notfound-404 h1 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 162px;
+    font-weight: 200;
+    margin: 0px;
+    color: #262626;
+    text-transform: uppercase;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+  }
+  
+  .notfound h2 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 32px;
+    font-weight: 400;
+    text-transform: uppercase;
+    color: #262626;
+    margin: 0px;
+  }
+  
+  .notfound p {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 16px;
+    color: #262626;
+    font-weight: 400;
+    margin-top: 20px;
+  }
+  
+  .notfound p a {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: 600;
+  }
+  
+  .notfound p a:hover {
+    text-decoration: underline;
+  }
+  
