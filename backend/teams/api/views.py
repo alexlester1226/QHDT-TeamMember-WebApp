@@ -8,6 +8,17 @@ from users.models import User  # Import the User model
 from memos.models import Memo 
 from memos.api.serializers import MemoSerializer
 
+@api_view(['GET'])
+def list_teams(request):
+    if request.user.is_staff:
+        teams = Team.objects.all()
+    else:
+        teams = request.user.teams.all()
+    return Response(
+        [{"id": t.id, "name": t.name, "title": t.title, "bio": t.bio} for t in teams]
+    )
+
+
 @api_view(['POST'])
 def create_team(request):
     if request.method == 'POST':

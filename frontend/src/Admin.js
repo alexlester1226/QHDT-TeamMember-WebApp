@@ -1,39 +1,18 @@
-import React, { useEffect, useState, useContext } from 'react';
-import { useNavigate } from 'react-router-dom'; // Import useNavigate hook
-import UserContext from './UserContext'; // Import the UserContext
-import Header from './Header';
+import React, { useContext, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import UserContext from './UserContext';
 import AdminPage from './AdminPage';
-import './Admin.css';
-import Copyright from './Copyright';
 
-
-function Admin() {
-  const { userInfo, updateUser } = useContext(UserContext); // Get user info from UserContext
-  const navigate = useNavigate(); // Get navigate function for navigation
+export default function Admin() {
+  const { userInfo } = useContext(UserContext);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // If user is not an admin, navigate to '/'
-    if (userInfo.type !== 'Admin') {
+    if (userInfo && userInfo.type !== 'Admin') {
       navigate('/');
     }
-  }, [userInfo.type, navigate]);
+  }, [userInfo, navigate]);
 
-  return (
-    <div>
-      {/* {user && (
-        <p>User Information: {JSON.stringify(user)}</p>
-      )} */}
-      {userInfo.type === 'Admin' ? (
-        <div>
-          <Header />
-          <div className="admin-page-container">
-            <AdminPage />
-          </div>
-          <Copyright />
-        </div>
-      ) : null}
-    </div>
-  );
+  if (!userInfo || userInfo.type !== 'Admin') return null;
+  return <AdminPage />;
 }
-
-export default Admin;

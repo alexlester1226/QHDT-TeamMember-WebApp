@@ -1,22 +1,18 @@
-// PersonBlock.js
 import React from 'react';
-import './Person.css'; // Import CSS file for styling
-import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 
-
-function Person({ firstName, lastName, type }) {
+export default function Person({ firstName, lastName, type }) {
+  const initials = `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
   return (
-    <div className='person-block'>
-      <div className='person-info'>
-        <div className='person-icon'> 
-          <AccountCircleIcon fontSize="large" />
-        </div>
-        <div className='person-name'>
-          <p>{firstName} {lastName} - {type}</p>
-        </div>
+    <li className="flex items-center gap-3 border-b border-slate-100 py-3 last:border-b-0">
+      <span className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700">
+        {initials || '?'}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium text-slate-900">
+          {firstName} {lastName}
+        </p>
+        {type && <p className="text-xs text-slate-500">{type}</p>}
       </div>
-    </div>
+    </li>
   );
 }
-
-export default Person;

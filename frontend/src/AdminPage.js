@@ -1,213 +1,130 @@
 import React, { useState } from 'react';
-import './AdminPage.css';
+import api from './api';
+import Card from './ui/Card';
+import Button from './ui/Button';
+import Input from './ui/Input';
+import Alert from './ui/Alert';
 
-const AdminPage = () => {
-  const [titleDeleteMain, setTitleDeleteMain] = useState('');
-  const [titleDeleteTime, setTitleDeleteTime] = useState('');
+export default function AdminPage() {
+  const [postCreateTitle, setPostCreateTitle] = useState('');
+  const [postCreateBody, setPostCreateBody] = useState('');
+  const [postDeleteTitle, setPostDeleteTitle] = useState('');
 
-  const [titleCreateMain, setTitleCreateMain] = useState('');
-  const [titleCreateTime, setTitleCreateTime] = useState('');
-  const [contentMain, setContentMain] = useState('');
-  const [contentTimeLine, setContentTimeLine] = useState('');
-  const [team, setTeam] = useState('');
-  const [date, setDate] = useState('');
+  const [evCreateTitle, setEvCreateTitle] = useState('');
+  const [evCreateDesc, setEvCreateDesc] = useState('');
+  const [evCreateTeam, setEvCreateTeam] = useState('');
+  const [evCreateDate, setEvCreateDate] = useState('');
+  const [evDeleteTitle, setEvDeleteTitle] = useState('');
 
-  const handleTitleChangeCreateTime = (e) => {
-    setTitleCreateTime(e.target.value);
-  };
+  const [flash, setFlash] = useState(null);
 
-  const handleTitleChangeCreateMain = (e) => {
-    setTitleCreateMain(e.target.value);
-  };
-
-  const handleTitleChangeDeleteMain = (e) => {
-    setTitleDeleteMain(e.target.value);
-  };
-
-  const handleTitleChangeDeleteTime = (e) => {
-    setTitleDeleteTime(e.target.value);
-  };
-
-  const handleContentChangeMain = (e) => {
-    setContentMain(e.target.value);
-  };
-
-  const handleContentChangeTime = (e) => {
-    setContentTimeLine(e.target.value);
-  };
-
-  const handleTeamChange = (e) => {
-    setTeam(e.target.value);
-  };
-
-  const handleDateChange = (e) => {
-    setDate(e.target.value);
+  const show = (severity, message) => {
+    setFlash({ severity, message });
+    setTimeout(() => setFlash(null), 3000);
   };
 
   const createPost = async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/posts/create_post/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: titleCreateMain,
-          body: contentMain,
-        }),
-      });
-      if (response.ok) {
-        const responseData = await response.json();
-        console.log('Post created successfully:', responseData);
-        alert('Post created successfully!');
-
-        // You can update state or perform other actions after successful creation
-      } else {
-        throw new Error('Failed to create post');
-      }
-    } catch (error) {
-      console.error('Error creating post:', error);
-      // Handle error, show error message, etc.
-    }
+      await api.post('/posts/create_post/', { title: postCreateTitle, body: postCreateBody });
+      show('success', 'Announcement created.');
+      setPostCreateTitle(''); setPostCreateBody('');
+    } catch (e) { show('error', 'Failed to create announcement.'); }
   };
 
   const deletePost = async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/posts/delete_post/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: titleDeleteMain,
-        }),
-      });
-      if (response.ok) {
-        console.log('Post deleted successfully');
-        alert('Post deleted successfully!');
-        // You can update state or perform other actions after successful deletion
-      } else {
-        throw new Error('Failed to delete post');
-      }
-    } catch (error) {
-      console.error('Error deleting post:', error);
-      // Handle error, show error message, etc.
-    }
+      await api.post('/posts/delete_post/', { title: postDeleteTitle });
+      show('success', 'Announcement deleted.');
+      setPostDeleteTitle('');
+    } catch (e) { show('error', 'Failed to delete announcement.'); }
   };
 
-  const createTimelineEntry = async () => {
+  const createEvent = async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/timeline/create_timeline_entry/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: titleCreateTime,
-          description: contentTimeLine,
-          team: team,
-          date: date,
-        }),
+      await api.post('/timeline/', {
+        title: evCreateTitle,
+        description: evCreateDesc,
+        team: Number(evCreateTeam),
+        date: evCreateDate,
       });
-      if (response.ok) {
-        const responseData = await response.json();
-        console.log('Timeline entry created successfully:', responseData);
-        alert('Timeline entry created successfully!');
-
-        // You can update state or perform other actions after successful creation
-      } else {
-        throw new Error('Failed to create timeline entry');
-      }
-    } catch (error) {
-      console.error('Error creating timeline entry:', error);
-      // Handle error, show error message, etc.
-    }
+      show('success', 'Timeline event created.');
+      setEvCreateTitle(''); setEvCreateDesc(''); setEvCreateTeam(''); setEvCreateDate('');
+    } catch (e) { show('error', 'Failed to create event.'); }
   };
 
-  const deleteTimelineEntry = async () => {
+  const deleteEvent = async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/timeline/delete_timeline_entry/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: titleDeleteTime,
-        }),
-      });
-      if (response.ok) {
-        console.log('Timeline entry deleted successfully');
-        alert('Timeline entry deleted successfully!');
-        // You can update state or perform other actions after successful deletion
-      } else {
-        throw new Error('Failed to delete timeline entry');
-      }
-    } catch (error) {
-      console.error('Error deleting timeline entry:', error);
-      // Handle error, show error message, etc.
-    }
+      const { data: rows } = await api.get('/timeline/');
+      const match = rows.find((r) => r.title === evDeleteTitle);
+      if (!match) { show('error', 'No event with that title.'); return; }
+      await api.delete(`/timeline/${match.id}/`);
+      show('success', 'Timeline event deleted.');
+      setEvDeleteTitle('');
+    } catch (e) { show('error', 'Failed to delete event.'); }
   };
 
   return (
-    <div>
-    <div className="admin-container"> {/* Parent container */}
-      <div className="container">
-        <h2>Create Announcements</h2>
-        <div className="form-group">
-          <label>Title:</label>
-          <input type="text" value={titleCreateMain} onChange={handleTitleChangeCreateMain} />
-        </div>
-        <div className="form-group">
-          <label>Content:</label>
-          <textarea value={contentMain} onChange={handleContentChangeMain} />
-        </div>
-        <button onClick={createPost}>Add Post</button>
+    <div className="mx-auto max-w-6xl space-y-8">
+      <div>
+        <h1 className="text-2xl font-semibold text-slate-900">Admin tools</h1>
+        <p className="mt-1 text-sm text-slate-500">
+          Manage global announcements and timeline events.
+        </p>
       </div>
 
-      <div className="container">
-        <h2>Delete Announcements</h2>
-        <div className="form-group">
-          <label>Title:</label>
-          <input type="text" value={titleDeleteMain} onChange={handleTitleChangeDeleteMain} />
-        </div>
-        <button onClick={deletePost}>Delete Post</button>
-      </div>
-      </div>
+      {flash && <Alert severity={flash.severity}>{flash.message}</Alert>}
 
-    <div className="admin-container"> {/* Parent container */}
-      <div className="container">
-        <h2>Create Timeline Entry</h2>
-        <div className="form-group">
-          <label>Title:</label>
-          <input type="text" value={titleCreateTime} onChange={handleTitleChangeCreateTime} />
+      <Card className="p-6">
+        <h2 className="text-lg font-semibold text-slate-900">Announcements</h2>
+        <div className="mt-4 grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium text-slate-700">Create</h3>
+            <Input label="Title" value={postCreateTitle} onChange={(e) => setPostCreateTitle(e.target.value)} />
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">Content</label>
+              <textarea
+                rows={4}
+                value={postCreateBody}
+                onChange={(e) => setPostCreateBody(e.target.value)}
+                className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              />
+            </div>
+            <Button onClick={createPost}>Create</Button>
+          </div>
+          <div className="space-y-3 md:border-l md:border-slate-200 md:pl-6">
+            <h3 className="text-sm font-medium text-slate-700">Delete</h3>
+            <Input label="Title" value={postDeleteTitle} onChange={(e) => setPostDeleteTitle(e.target.value)} />
+            <Button variant="danger" onClick={deletePost}>Delete</Button>
+          </div>
         </div>
-        <div className="form-group">
-          <label>Description:</label>
-          <textarea value={contentTimeLine} onChange={handleContentChangeTime} />
-        </div>
-        <div className="form-group">
-          <label>Team:</label>
-          <input type="text" value={team} onChange={handleTeamChange} />
-        </div>
-        <div className="form-group">
-          <label>Date:</label>
-          <input type="text" value={date} onChange={handleDateChange} />
-        </div>
-        <button onClick={createTimelineEntry}>Add Timeline Entry</button>
-      </div>
+      </Card>
 
-      <div className="container">
-        <h2>Delete Timeline Entry</h2>
-        <div className="form-group">
-          <label>Title:</label>
-          <input type="text" value={titleDeleteTime} onChange={handleTitleChangeDeleteTime} />
+      <Card className="p-6">
+        <h2 className="text-lg font-semibold text-slate-900">Timeline events</h2>
+        <div className="mt-4 grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium text-slate-700">Create</h3>
+            <Input label="Title" value={evCreateTitle} onChange={(e) => setEvCreateTitle(e.target.value)} />
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">Description</label>
+              <textarea
+                rows={3}
+                value={evCreateDesc}
+                onChange={(e) => setEvCreateDesc(e.target.value)}
+                className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              />
+            </div>
+            <Input label="Team ID" value={evCreateTeam} onChange={(e) => setEvCreateTeam(e.target.value)} />
+            <Input label="Date" type="date" value={evCreateDate} onChange={(e) => setEvCreateDate(e.target.value)} />
+            <Button onClick={createEvent}>Create</Button>
+          </div>
+          <div className="space-y-3 md:border-l md:border-slate-200 md:pl-6">
+            <h3 className="text-sm font-medium text-slate-700">Delete</h3>
+            <Input label="Title" value={evDeleteTitle} onChange={(e) => setEvDeleteTitle(e.target.value)} />
+            <Button variant="danger" onClick={deleteEvent}>Delete</Button>
+          </div>
         </div>
-        <button onClick={deleteTimelineEntry}>Delete Timeline Entry</button>
-      </div>
+      </Card>
     </div>
-    </div>
-
   );
-};
-
-export default AdminPage;
+}

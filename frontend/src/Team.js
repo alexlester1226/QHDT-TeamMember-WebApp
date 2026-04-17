@@ -1,222 +1,211 @@
-import React, { useEffect, useState, useContext } from 'react';
-import UserContext from './UserContext'; // Import the UserContext
-import Header from './Header'
+import React, { useState } from 'react';
+import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import TeamHeader from './TeamHeader';
-import Divider from '@mui/material/Divider';
-import Copyright from './Copyright';
-import './Team.css';
-import { IconButton } from '@mui/material';
-import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
-import HighlightOffIcon from '@mui/icons-material/HighlightOff';
 import Person from './Person';
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import { styled } from '@mui/material/styles';
+import Card from './ui/Card';
+import Button from './ui/Button';
+import Input from './ui/Input';
+import Dialog from './ui/Dialog';
+import api from './api';
 
+function formatDate(dateString) {
+  if (!dateString) return '';
+  const d = new Date(dateString);
+  if (Number.isNaN(d.getTime())) return dateString;
+  return d.toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
 
-const BootstrapDialog = styled(Dialog)(({ theme }) => ({
-  '& .MuiDialogContent-root': {
-    padding: theme.spacing(2),
-  },
-  '& .MuiDialogActions-root': {
-    padding: theme.spacing(1),
-  },
-}));
+export default function Team({ id, name, title, users = [], memos = [], bio }) {
+  const [createOpen, setCreateOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [newBody, setNewBody] = useState('');
+  const [delTitle, setDelTitle] = useState('');
+  const [delError, setDelError] = useState('');
+  const [saving, setSaving] = useState(false);
 
-
-
-
-function Team({ name, title, users = [], memos =[], bio}) { 
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isDialogDelOpen, setIsDialogDelOpen] = useState(false);
-
-  const [titleCreateMain, setTitleCreateMain] = useState('');
-  const [titleDelMain, setTitleDelMain] = useState('');
-
-  const [contentMain, setContentMain] = useState('');
-
-  const handleTitleChangeCreateMain = (e) => {
-    setTitleCreateMain(e.target.value);
+  const resetCreate = () => {
+    setNewTitle('');
+    setNewBody('');
+  };
+  const resetDelete = () => {
+    setDelTitle('');
+    setDelError('');
   };
 
-  const handleTitleChangeDelMain = (e) => {
-    setTitleDelMain(e.target.value);
-  };
-
-  const handleContentChangeMain = (e) => {
-    setContentMain(e.target.value);
-  };
-
-  const handleAddClick = () => {
-    setIsDialogOpen(true);
-  };
-
-  const handleDelClick = () => {
-    setIsDialogDelOpen(true);
-  };
-
-  const handleDialogClose = () => {
-    setIsDialogOpen(false);
-    setIsDialogDelOpen(false);
-    allFalse();
-  };
-
-  const allFalse = () => {
-    setTitleCreateMain("");
-    setContentMain("");
-    setTitleDelMain("");
-   
-  };
-
-  const createMemo = async () => {
+  const createMemo = async (e) => {
+    e.preventDefault();
+    setSaving(true);
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/memos/create_memo/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: titleCreateMain,
-          body: contentMain,
-          team: bio,
-          
-        }),
-      });
-      if (response.ok) {
-        const responseData = await response.json();
-        console.log('Post created successfully:', responseData);
-        alert('Post created successfully!');
-        window.location.reload();
-        // You can update state or perform other actions after successful creation
-      } else {
-        throw new Error('Failed to create post');
-      }
-    } catch (error) {
-      console.error('Error creating post:', error);
-      // Handle error, show error message, etc.
+      await api.post('/memos/', { title: newTitle, body: newBody, team: id });
+      window.location.reload();
+    } catch (err) {
+      console.error('Error creating memo:', err);
+    } finally {
+      setSaving(false);
     }
   };
 
-  const deletePost = async () => {
-    try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/memos/delete_memo/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: titleDelMain,
-        }),
-      });
-      if (response.ok) {
-        console.log('Post deleted successfully');
-        alert('Post deleted successfully!');
-        window.location.reload();
-        // You can update state or perform other actions after successful deletion
-      } else {
-        throw new Error('Failed to delete post');
-      }
-    } catch (error) {
-      console.error('Error deleting post:', error);
-      // Handle error, show error message, etc.
+  const deleteMemo = async (e) => {
+    e.preventDefault();
+    setDelError('');
+    const match = memos.find((m) => m.title === delTitle);
+    if (!match) {
+      setDelError('No announcement matches that title.');
+      return;
     }
-  };
-
-
-  const formatDate = (dateString) => {
-    const dateObject = new Date(dateString);
-    const options = { month: 'long', day: 'numeric', year: 'numeric' };
-    const formattedDate = dateObject.toLocaleDateString('en-US', options);
-
-    const day = dateObject.getDate();
-    const daySuffix = (day) => {
-      if (day >= 11 && day <= 13) {
-        return 'th';
-      }
-      switch (day % 10) {
-        case 1: return 'st';
-        case 2: return 'nd';
-        case 3: return 'rd';
-        default: return 'th';
-      }
-    };
-
-    const formattedDay = `${day}${daySuffix(day)}`;
-    return formattedDate.replace(/\d+/, formattedDay);
+    setSaving(true);
+    try {
+      await api.delete(`/memos/${match.id}/`);
+      window.location.reload();
+    } catch (err) {
+      console.error('Error deleting memo:', err);
+      setDelError('Failed to delete. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <div>
-      <Header />
-      <TeamHeader 
-       name={name}
-       title={title}
-      />
-      <Divider />
-      <div className='col'>
-        <div className='team-announcements'>
-          <div className='team-header'>
-            <h1>Announcements</h1>
-            <AddCircleOutlineIcon className="icon" fontSize="large" onClick={handleAddClick}/>
-            <BootstrapDialog
-            onClose={handleDialogClose}
-            aria-labelledby="customized-dialog-title"
-            open={isDialogOpen}
-        >
-            <div style={{ padding: '16px' }}>
-                <h2>Create Announcements</h2>
-                <div className="form-group">
-                    <label>Title:</label>
-                    <input type="text" value={titleCreateMain} onChange={handleTitleChangeCreateMain} />
-                </div>
-                <div className="form-group">
-                    <label>Content:</label>
-                    <textarea value={contentMain} onChange={handleContentChangeMain} />
-                </div>
-                <button onClick={createMemo}>Add Post</button>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <TeamHeader name={name} title={title} bio={bio} />
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
+        <section>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-slate-900">Announcements</h2>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => { resetCreate(); setCreateOpen(true); }}
+              >
+                <PlusIcon className="h-4 w-4" /> Add
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { resetDelete(); setDeleteOpen(true); }}
+              >
+                <TrashIcon className="h-4 w-4" /> Delete
+              </Button>
             </div>
-        </BootstrapDialog>
-            <HighlightOffIcon className="icon" fontSize="large"  onClick={handleDelClick}/>
-            <BootstrapDialog
-            onClose={handleDialogClose}
-            aria-labelledby="customized-dialog-title"
-            open={isDialogDelOpen}
-        >
-            <div style={{ padding: '16px' }}>
-                <h2>Delete Announcements</h2>
-                <div className="form-group">
-                    <label>Title:</label>
-                    <input type="text" value={titleDelMain} onChange={handleTitleChangeDelMain} />
-                </div>
-                <button onClick={deletePost}>Delete Post</button>
-            </div>
-        </BootstrapDialog>
           </div>
-          {memos.slice().reverse().map(memo => (
-             <div className="team-announcement">
-             <h2>{memo.title}</h2>
-             <span className="date">{formatDate(memo.created_at)}</span>
-             <p>{memo.body}</p>
-           </div>
-          ))}
-        </div>
-        <div className='team-members'>
-          <h2>Team Members</h2>
-          {users.map(user => (
-            <Person
-              key={user.id}
-              firstName={user.first_name}
-              lastName={user.last_name}
-              type={user.type}
-            />
-          ))}
-        </div>
+
+          {memos.length === 0 ? (
+            <Card className="p-10 text-center">
+              <p className="text-sm text-slate-500">No announcements yet.</p>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {memos.slice().reverse().map((memo) => (
+                <Card key={memo.id} className="p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <h3 className="text-base font-semibold text-slate-900">
+                      {memo.title}
+                    </h3>
+                    <span className="flex-none text-xs text-slate-500">
+                      {formatDate(memo.created_at)}
+                    </span>
+                  </div>
+                  <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-slate-700">
+                    {memo.body}
+                  </p>
+                </Card>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section>
+          <h2 className="mb-4 text-lg font-semibold text-slate-900">
+            Team members
+          </h2>
+          <Card className="p-4">
+            {users.length === 0 ? (
+              <p className="py-4 text-center text-sm text-slate-500">
+                No members yet.
+              </p>
+            ) : (
+              <ul>
+                {users.map((user) => (
+                  <Person
+                    key={user.id}
+                    firstName={user.first_name}
+                    lastName={user.last_name}
+                    type={user.type}
+                  />
+                ))}
+              </ul>
+            )}
+          </Card>
+        </section>
       </div>
-      <Copyright />
+
+      <Dialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        title="New announcement"
+        description="Share an update with your team."
+      >
+        <form className="space-y-4" onSubmit={createMemo}>
+          <Input
+            label="Title"
+            required
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+          />
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">
+              Content
+            </label>
+            <textarea
+              rows={4}
+              required
+              value={newBody}
+              onChange={(e) => setNewBody(e.target.value)}
+              className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" onClick={() => setCreateOpen(false)} type="button">
+              Cancel
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? 'Posting…' : 'Post'}
+            </Button>
+          </div>
+        </form>
+      </Dialog>
+
+      <Dialog
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        title="Delete announcement"
+        description="Enter the exact title to remove."
+      >
+        <form className="space-y-4" onSubmit={deleteMemo}>
+          <Input
+            label="Title"
+            required
+            value={delTitle}
+            onChange={(e) => setDelTitle(e.target.value)}
+            error={delError || undefined}
+          />
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" onClick={() => setDeleteOpen(false)} type="button">
+              Cancel
+            </Button>
+            <Button variant="danger" type="submit" disabled={saving}>
+              {saving ? 'Deleting…' : 'Delete'}
+            </Button>
+          </div>
+        </form>
+      </Dialog>
     </div>
-  )
+  );
 }
-
-export default Team
-

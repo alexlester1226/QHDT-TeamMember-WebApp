@@ -1,105 +1,93 @@
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from django.contrib.auth.hashers import make_password
-from .serializers import UserSerializer
+from django.contrib.auth import authenticate
 from rest_framework import status
 from rest_framework.authtoken.models import Token
-from ..models import User
-import random
-from django.contrib.auth.hashers import check_password
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+
 from teams.models import Team
 
+from ..models import User
+from .serializers import UserSerializer
 
 
-@api_view(['POST'])
-def login(request):
-    email = request.data.get('email')
-    password = request.data.get('password')
-    
-    # Check if email and password are provided
-    if not email or not password:
-        return Response({"error": "Email and password are required"}, status=status.HTTP_400_BAD_REQUEST)
-    
-    try:
-        user = User.objects.get(email=email)
-    except User.DoesNotExist:
-        # User does not exist
-        return Response({"error": "Invalid email or password"}, status=status.HTTP_401_UNAUTHORIZED)
-
-    if check_password(password, user.password):
-        user_data = {
-            'id': user.id,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-            'type': user.type,
-            'team': user.team,
-            'token': user.token  # Token for authentication
-        }
-        return Response(user_data, status=status.HTTP_200_OK)
-    else:
-        return Response({"error": "Invalid email or password"}, status=status.HTTP_401_UNAUTHORIZED)
-
-
-
-# @api_view(['POST'])
-# def signup(request):
-#     serializer = UserSerializer(data=request.data)
-#     if serializer.is_valid():
-#         user = serializer.save()  # Save the user instance returned by serializer
-#         password = request.data.get('password')  # Safely retrieve password from request data
-#         if password:
-#             hashed_password = make_password(password)  # Hash the plain-text password
-#             user.password = hashed_password  # Set the hashed password to the user instance            
-#             # Get or create token for the user
-#             token = ''.join([str(random.randint(0, 9)) for _ in range(15)])
-#             user.token = token
-#             user.save()  # Save user instance with token
-
-            
-#             return Response({"user": serializer.data}, status=status.HTTP_201_CREATED)
-#         else:
-#             return Response({"error": "Password is required"}, status=status.HTTP_400_BAD_REQUEST)
-#     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-@api_view(['POST'])
+@api_view(["POST"])
+@permission_classes([AllowAny])
 def signup(request):
-    serializer = UserSerializer(data=request.data)
-    if serializer.is_valid():
-        user = serializer.save()  # Save the user instance returned by serializer
-        password = request.data.get('password')  # Safely retrieve password from request data
-        team_bio = request.data.get('team')  # Get team bio from request data
+    email = request.data.get("email")
+    password = request.data.get("password")
+    first_name = request.data.get("first_name", "")
+    last_name = request.data.get("last_name", "")
+    user_type = request.data.get("type", "")
+    team_bio = request.data.get("team")
 
-        if password:
-            hashed_password = make_password(password)  # Hash the plain-text password
-            user.password = hashed_password  # Set the hashed password to the user instance
+    if not email or not password:
+        return Response(
+            {"error": "Email and password are required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    if User.objects.filter(email=email).exists():
+        return Response(
+            {"error": "A user with that email already exists"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
-            # Check if a Team with the same bio exists
-            try:
-                team = Team.objects.get(bio=team_bio)
-                # Add user to the team
-                team.users.add(user)
-
-                # Get or create token for the user
-                token = ''.join([str(random.randint(0, 9)) for _ in range(15)])
-                user.token = token
-                user.save()  # Save user instance with token
-
-                return Response({"user": serializer.data}, status=status.HTTP_201_CREATED)
-            except Team.DoesNotExist:
-                return Response({"error": f"No team with the bio '{team_bio}' found"}, status=status.HTTP_404_NOT_FOUND)
-        else:
-            return Response({"error": "Password is required"}, status=status.HTTP_400_BAD_REQUEST)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-@api_view(['POST'])
-def test_token(request):
-    token = request.data.get('token')
-
+    if not team_bio:
+        return Response(
+            {"error": "Team bio is required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
     try:
-        user = User.objects.get(token=token)
-    except User.DoesNotExist:
-        return False
+        team = Team.objects.get(bio=team_bio)
+    except Team.DoesNotExist:
+        return Response(
+            {"error": f"Invalid team bio '{team_bio}'. No team with that bio exists."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
-    return True
+    user = User.objects.create_user(
+        email=email,
+        password=password,
+        first_name=first_name,
+        last_name=last_name,
+        type=user_type,
+    )
+    team.users.add(user)
+
+    token, _ = Token.objects.get_or_create(user=user)
+    return Response(
+        {"user": UserSerializer(user).data, "token": token.key},
+        status=status.HTTP_201_CREATED,
+    )
 
 
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def login(request):
+    email = request.data.get("email")
+    password = request.data.get("password")
+
+    if not email or not password:
+        return Response(
+            {"error": "Email and password are required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    user = authenticate(request, username=email, password=password)
+    if user is None:
+        return Response(
+            {"error": "Invalid email or password"},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+
+    token, _ = Token.objects.get_or_create(user=user)
+    data = UserSerializer(user).data
+    data["token"] = token.key
+    return Response(data, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def logout(request):
+    Token.objects.filter(user=request.user).delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)

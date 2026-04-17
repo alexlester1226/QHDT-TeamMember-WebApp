@@ -1,80 +1,73 @@
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Header from './Header';
-import Copyright from './Copyright';
-import UserContext from './UserContext'; // Import the UserContext
-import './Main.css';
+import UserContext from './UserContext';
+import api from './api';
+import Card from './ui/Card';
+import Spinner from './ui/Spinner';
 
-const Main = () => {
+function formatDate(dateString) {
+  if (!dateString) return '';
+  const d = new Date(dateString);
+  if (Number.isNaN(d.getTime())) return dateString;
+  return d.toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+export default function Main() {
   const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const user = useContext(UserContext); // Get user info from UserContext
+  const { userInfo } = useContext(UserContext);
 
   useEffect(() => {
-    console.log('sign-in');
     async function fetchData() {
-      console.log(process.env.REACT_APP_API_URL);
       try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/posts`);
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-        const result = await response.json();
-        console.log(result);
+        const { data: result } = await api.get('/posts/');
         setData(result);
       } catch (error) {
-        console.error("Error fetching data:", error);
-        // Redirect to login page if there's an error fetching data and user is not logged in
-        if (!user.userInfo) {
-          console.log('sign-in');
-          navigate('/sign-in');
-        }
+        if (!userInfo) navigate('/login');
+      } finally {
+        setLoading(false);
       }
     }
-
     fetchData();
-  }, [navigate, user.userInfo]);
-
-  const formatDate = (dateString) => {
-    const dateObject = new Date(dateString);
-    const options = { month: 'long', day: 'numeric', year: 'numeric' };
-    const formattedDate = dateObject.toLocaleDateString('en-US', options);
-
-    const day = dateObject.getDate();
-    const daySuffix = (day) => {
-      if (day >= 11 && day <= 13) {
-        return 'th';
-      }
-      switch (day % 10) {
-        case 1: return 'st';
-        case 2: return 'nd';
-        case 3: return 'rd';
-        default: return 'th';
-      }
-    };
-
-    const formattedDay = `${day}${daySuffix(day)}`;
-    return formattedDate.replace(/\d+/, formattedDay);
-  };
+  }, [navigate, userInfo]);
 
   return (
-    <div>
-      <Header />
-      {/* Display user information */}
-  
-      <div className='announcements'>
-        <h1>Announcements</h1>
-        {data.slice().reverse().map((announcement, index) => (
-          <div className="announcement" key={index}>
-            <h2>{announcement.title}</h2>
-            <span className="date">{formatDate(announcement.created_at)}</span>
-            <p>{announcement.body}</p>
-          </div>
-        ))}
+    <div className="mx-auto max-w-4xl">
+      <div className="mb-6 flex items-baseline justify-between">
+        <h1 className="text-2xl font-semibold text-slate-900">Announcements</h1>
+        <span className="text-sm text-slate-500">
+          {data.length} {data.length === 1 ? 'post' : 'posts'}
+        </span>
       </div>
-      <Copyright />
+
+      {loading ? (
+        <div className="flex justify-center py-16"><Spinner /></div>
+      ) : data.length === 0 ? (
+        <Card className="p-10 text-center">
+          <p className="text-sm text-slate-500">No announcements yet.</p>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {data.slice().reverse().map((a) => (
+            <Card key={a.id} className="p-6">
+              <div className="flex items-start justify-between gap-4">
+                <h2 className="text-lg font-semibold text-slate-900">{a.title}</h2>
+                <span className="flex-none text-xs text-slate-500">
+                  {formatDate(a.created_at)}
+                </span>
+              </div>
+              <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-slate-700">
+                {a.body}
+              </p>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
-};
-
-export default Main;
+}
